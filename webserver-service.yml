@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+ name: httpserver-service
+ labels:
+  name: httpserver-service
+  app: http-server
+spec:
+ type: LoadBalancer
+ ports:
+  - port: 80
+    targetPort: 80
+ selector:
+  name: http-server
+  app: demo-httpserver
+  type: front-end

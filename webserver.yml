@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata: 
+ name: httpserver
+ labels: 
+  name: http-server
+  app: demo-httpserver
+  type: front-end
+spec:
+ containers:
+  - name: httpd-app
+    image: docker.io/mohdizhar/project:v1
+    ports:
+     - containerPort: 80 
