@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+ name: ymlpod
+ labels:
+  app: webpod
+spec:
+ containers:
+  - name: ymlpod
+    image: httpd
