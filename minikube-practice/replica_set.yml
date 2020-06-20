@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+ name: new-web-rs
+spec:
+ replicas: 3
+ selector:
+  matchLabels:
+   app: new-web-rs
+ template:
+  metadata:
+   name: new-web-pod
+   labels:
+    app: new-web-rs
+    tier: frontend
+  spec:
+   containers:
+    - name: rs-web-containers
+      image: httpd
+      ports:
+       - containerPort: 80
