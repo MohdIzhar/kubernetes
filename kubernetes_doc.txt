@@ -1,0 +1,795 @@
+
+-> kubernetes or k8s
+
+# Architecture
+
+-> nodes or (minions) -> a virtual machine where containers are running.
+* it is necessary to have more than one node because if one node fails the services will not go down and other nodes can easily manage them.
+-> master -> the machine which take care of the cluster information basically nodes info and manages the cluster.
+
+# Installing kubernetes 
+
+-> components in kubernetes installed:-
+
+1) API Server - acts as a frontend for kubernetes, users, manageable device, commandline interfaces all talk to api to interact with kubernetes
+2) etcd - contain all information of nodes and master you can say as databases.
+3) kubelet - an agent on every nodes responsible for interacting with nodes so that they are running.
+4) Container Runtime - are the underlying software that are used to run container in our case its docker. (others may be rocket or CRI-O)
+5) Controller - are the brain behind orchastration responsible for noticing and responding when nodes, containers or end points goes down. The controller take decision in such cases to bring new container.
+6) Scheduler - responsible for distributing work over nodes look for newly created containers and assign them over mulitple nodes.
+
+-> master has api-server and nodes has kubelet 
+-> master has etcd, controller, scheduler.
+
+* kubectl or kube controller is used to get interact with command line of kubernetes and many other things such as deployment, service, etc.
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+# Kubernetes Setup
+
+-> minikube (single instance on your machine)
+-> kubeadm (setting up multinode cluster manually in all VM)
+-> Cloud Platform (AWS or GCP)
+-> Play with kubernetes
+
+-----------------------------------------------------------------------------------------------------------
+
+# MINIKUBE
+
+-> go to browser and download for windows and rename to minikube.exe
+-> go to cmd of windows and path where  minikube.exe is downloaded
+-> execute this cmd- "minikube.exe"
+-> go to browser doc for demo
+----------------------------------------------------------------------------------------------------
+
+# KUBEADM
+
+-> 3 VMs atlest 2 minion or node and 1 master
+-> install docker,kubeadm on all nodes
+-> intialize master server
+-> pod networks 
+-> running join command in nodes only
+-> disable swap, make ip static, ports enabled
+-> set hostname, make hostfilename permanent
+* /etc/network/interface file for making static ip in ubuntu.
+* swapoff -a or vi /etc/fstab delete or comment swap line
+* kubeadm init --pod-network-cidr=<ip> --apiserver-advertise-address=<masterip>
+* export KUBECONFIG=/etc/kubernetes/admin.conf
+* apply networking file using kubectl apply -f <filename> cmd
+* run the given cmds on master and run join command in nodes
+
+-> kubectl run nginx --image=nginx
+-> kubectl get pods 				// to check demo of working cluster
+------------------------------------------------------------------------------------------------
+
+# GKE DEMO
+-> kunernetes engine quick start
+-> goto kubernetes engine				// to goto dashboard of k8s
+-> create, give name else leave everything as default
+-> click on google shell to get cli so that to interact with kubernetes cmds
+-> run the cmd provided by cluster on CLI
+-------------------------------------------------------------------------------------------------------------------
+
+# PODS
+
+-> container doesnt deploy application directly,  single instances of an application, encaplsualted in container.
+-> each cotainer has helper pods and destroys if contianer destroys. 
+-> docker run python-app
+-> docker run pyhton-app
+-> docker run helper --link app1
+-> docker run helper --link app2
+----------------------------------------------------------------------------------
+-> kubectl run nginx --image=nginx
+-> kubectl get pods
+-> kubectl describe pods
+-> kubectl get pods -o wide
+* we sucessfully deployed the nginx
+--------------------------------------------------------
+
+# YAML
+
+-> key:value
+-> Array/List
+Fruit:
+- apple
+- banana
+- orange
+vegetable:
+- carrot
+- tomato
+
+-> Dictionary/Map
+Banana:
+	Calories: 105
+	Fat: 0.4g
+	Carbs: 27g
+Grapes:
+	Calories: 62
+	Fat: 0.3g
+	Carbs: 16g
+	
+-> Key Value/Dictionary/List
+Fruits:
+	- Banana:
+		Calories: 105
+		Fat: 0.4g
+		Carbs: 27g
+	- Grapes:
+		Calories: 62
+		Fat: 0.3g
+		Carbs: 16g
+
+Dictionary VS List VS List of Dictionaries
+-> take example of cars color, models, etc.
+
+- Color: Blue
+  Model:
+	Name: Innova
+	Year_Model: 2010
+  Price: $20,000
+  Transition: Manual
+- Color: Red
+  Model:
+	Name: Innova
+	Year_Model: 2015
+  Price: $30,000
+  Transition: Manual
+- Color: Green
+  Model:
+	Name: Innova
+	Year_Model: 2019
+  Price: $35,000
+  Transition: Automatic
+---etc
+
+-> Dictionary is an unordered collection of data
+-> List is an ordered of data
+-> Arrays are oredered collection but order matters as:
+Fruits:
+- Apple
+- Banana
+Fruits:
+- Banana
+- Apple
+
+Fruits are =!
+---------------------------------------------------------------
+
+# YAML in K8s
+
+-> pod-definition.yml
+
+* k8s yml file contain 4 important field must and mandatory
+apiVersion: v1		// version of kubernetes api as v1 if working with pods or service, apps/v1 ReplicaSet or Deployemt, etc.
+kind: Pod		// Pod, Deployement, Service, etc
+metadata: 		// data about object name: abc, labels: app: myapp type: front-end, etc but must be in dictinoary type
+ - name: myapp-pod
+ - labels:
+	app: myapp
+	type: frontend
+spec:			// is a dictionary
+ containers:		// contianers is a list/array beacause conatianer may be multiple
+  - name: nginx-container
+    image: nginx
+
+-> kubectl create -f <filename>.yml
+-> kubectl get pods
+-> kubectl describe pods
+
+// Replica Controllers and ReplicaSets
+
+-> if one pods fails how to manage the availbility to users, so this is done by replica controller if one fails it will automatically create new pods and if the number of users increase it automatically create pods to manage loads
+-> re-difinitoin.yml
+
+apiVersion: v1
+kind: ReplicationController
+metadata:
+	name: myapp-rc
+	labels:
+		app: myapp
+		type: front-end
+spec:
+	template:					//used by pods to create template and specify the previous pod-definition.yml from metadata
+	 metadata:
+		name: myapp-pod
+		labels:
+			name: myapp
+			type: front-end
+	 spec:						// must be intended with respect to metadata
+		containers:
+			- name: nginx-container
+			  image: nginx
+	replicas: 3					// must be intended with respect to template
+
+-> kubectl create -f rc-definiton.yml
+-> kubectl get replicationcontroller
+-> kubectl get pods
+
+// Replica Sets
+
+apiVersion: apps/v1
+kind: ReplicationSets
+metadata:
+	name: myapp-rc
+	labels:
+		app: myapp
+		type: front-end
+spec:
+	template:				//used by pods to create template and specify the previous pod-definition.yml from metadata
+	 metadata:
+		name: myapp-pod
+		labels:
+			name: myapp
+			type: front-end
+	 spec:							// must be intended with respect to metadata
+		containers:
+			- name: nginx-container
+			  image: nginx
+	replicas: 3					// must be intended with respect to template
+	selector: 					// helps replicasets to identify what pods falls under it mandatory require by replica sets
+		matchLabels:				// must matches with labels specified under pods also provides many other functions
+			type: front-end
+
+-> kubectl get replicaset
+-> kubectl get pods
+
+// Labels and Selector
+* say we have running many pods running with same name so how to identify which to manage by replicasets so in this way label comes handy.
+* we have 3 replicas now and how to monitor them we use selector
+* scaling -> replicas:6
+-> kubectl replace -f replicaset-definition.yml				// to replace or incrase replicaset
+or
+-> kubectl scale --replicas=6 -f replicaset-definition.yml 
+or
+-> kubectl scale --replicas=6 replicaset[type] myapp-replicaset[name]
+-> kubectl delete replicaset <replicasetname>
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+# Demo-ReplicaSets
+
+-> delete one replicaset and check get replicaset to check the working of automatically scalling
+-> same label of replica are not allowed to be created with same name if already exist.
+-------------------------------------------------------------------------------------------------------
+
+# DEPLOYMENT
+
+-> help in managing updating, rollback, resume, pause pods heirarchy over replica sets
+
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+	name: myapp
+	labels:
+		app: myapp
+		type: front-end
+spec:
+	template:
+		metadata:
+			name: myapp-pod
+			labels:
+				app: myapp
+				type: front-end
+		spec:
+			containers:
+				- name: nginx-container
+				  image: nginx
+	replicas: 3
+	selector:
+		matchLabels:
+			type: front-end
+-> kubectl create -f deployment-definition.yml
+-> kubectl get deployments
+-> kubcetl get pods 
+
+-----DEMO------
+** yaml Lint go and check for valid yaml file on browser
+---------------------------------------------------------------------
+
+# ROLLOUT & UPDATE
+
+-> once the new version of deployment are created behind the scene revisions are created for different versions
+-> kubectl rollout status deployment/myapp-deployment
+-> kubectl rollout history deployment/myapp-deployment 
+
+// two types of deployment strategy 
+1) destroy all then create new, problem if all are down user cannot access it. This strategy is called Recreate.
+2) creating one by one, this strategy is called Rolling Update. behind the scene kubernetes create another replica set of newly pods and destroyed pods are still in replicaset1 so we can roll back
+
+
+-> kubectl apply -f <filename>			// apply is used to modify new changes made
+-> kubectl get replicasets
+-> kubectl rollout undo deployment/myapp-deployment
+-> kubectl get replicasets
+
+* kubectl run 		// create only deployment another way of creating deployment
+----cmd Summary-------
+create 	-> kubectl create -f deployment-definition.yml
+get 	-> kubectl get deployment
+update	-> kubectl apply -f <filename>
+satus	-> kubectl rollout history deployment/myapp-deployment 
+	   kubectl rollout status deployment/myapp-deployment	   
+rollback-> kubectl rollout undo deployment/myapp-deployment
+-----------------------------------------------------------------------------------------
+
+-> kubectl create -f deployment.yml --record 			#we can see the revision by applying this cmd else wont if we simply run deployment
+-> kubectl rollout status deployment/<deployemnt.yml>
+-> kubectl rollout history deployment/<deployemnt.yml>
+
+* change deployment.yml file for example change version 
+-> kubectl apply -f deployment/<deployemnt.yml>
+-> kubectl rollout status deployment/<deployemnt.yml>
+-> kubectl rollout history deployment/<deployemnt.yml>
+-> kubcetl get deploy
+-> kubectl get pods
+-> kubectl describe pods
+-> kubectl set image deployment/<deployemnt.yml> nginx-continer=nginx:<versoin> 			# external way of changing image	 
+-> kubectl rollout status deployment/<deployemnt.yml>
+-> kubectl rollout history deployment/<deployemnt.yml>
+-> kubectl get pods
+-> kubectl describe pods
+
+* to undo the update
+-> kubectl rollback undo deployment<deploy.yml>		# undo the current deploy and rollbcak to previous deployment but a new revision will be created vanishing the previous revision which is now changed to undo rollback
+
+vim deplyment.yml		# change a wrong version
+-> kubectl apply -f deployment.yml --record	
+* it will stuck to see whast happens
+-> kubectl get deployments
+-> kubectl get pods 
+
+*you see something  more replicas than specified.
+
+-> kubectl rollout history deployment/<deployemnt.yml>
+-----------------------------------------------------------------------------------------------------------
+
+# NODEPORT - SERVICES
+
+* helps in making front-end availability to users and connecting with backend apps and external data sources.
+
+we want to access the web page externally
+since nodes have diff network ip and external node or system are in same Ip
+but we cant ping to different ip since they are not in same network.
+we can do here is either go to nodes and run the curl cmd as:-
+-> curl http://10.244.0.2<pod_ip>
+but this is from inside the node
+* so in this case we need external source to connect with webpage so here
+comes the role of service. refers to node port where pods services are available
+
+Services types:
+1) nodeport -> default range 30000-32767 mapping of pod port to node port i.e 80<pod>:30008<node>
+service.yml
+apiVersion: v1
+kind: service
+metadata:
+	name: myapp-service
+spec:
+	type: NodePort
+	ports:
+	 - targetPort: 80
+	    port: 80  				# service object port
+	    nodeport: 30008
+* since we didnt specify the pods on which it has to be imposed so there can be multiple pods running so how to do that 
+so we know the concepts of labels and selector. labels name specified in deployment should match with selector in service.yml
+as:
+intend wrt ports:
+	selector:
+		app: myapp
+		type: front-end
+-> kubectl create -f service.yml
+-> kubectl get services
+-> curl http://192.168.43.8
+
+* since we have done this so far for on pod only suppose if we have multiple pods runnings ame web apps then:
+so there role of labels come to play the service collect all the pods of same labels and automatically divides them on same service as load balancing.
+you need not to configure any extra things.
+
+2) clusterip -> a full stack web application has different kinds of pods hosting diff kind of services such as front-end and back-end and databases serives
+so what is the best way to connect all these application together.
+Each pod has static ip and and can communicate internally but these pods can go down at any time
+so each can grp the same pods in a group and allow them to interact with a common service to all
+
+Front-end <pod1> Front-end <pod1> Front-end <pod1>
+     |	              |		       |
+    \|/		     \|/	      \|/
+     `		      `		       `
+      \               |		      /
+       \              |		     /
+        \             |		    /
+         \            |		   /
+          \           |		  /
+           \          | 	 /
+            \         |         /
+             \        |        / 
+              \       |       /
+               \      |	     /
+                \     |	    /    
+                 \    |    /
+                  \   |   /
+                   \  |  /
+                    \ | /
+                     \|/
+		      `
+____________________________________________________________________
+			SERVICE
+____________________________________________________________________
+	              	     ^
+	             	    /|\
+		    	   / | \
+ 		   	  /  |  \	
+		 	 /   |   \
+		 	/    |    \
+	               /     |     \
+	      	      /	     |      \ 
+	      	     /	     |       \
+	     	    /	     |        \
+	           /	     |         \
+	   	  /          |          \
+	  	 /	     |           \
+	 	/	     |            \  
+               /	     |	           \
+       	      /		     |	            \
+      	     /		     |		     \
+     	    /		     |		      \
+    	   /		     |   	       \
+   	  /		     |	                \
+ 	 /		     |		         \
+ 	/		     |		          \
+       /		     |                     \
+      /			     |		            \
+     _			     _			     _
+    /|\			    /|\		            /|\
+     |			     |			     |
+____________________________________________________________________________________________
+			SERVICE
+______________________________________________________________________________________________
+Back-end <pod1>	Back-end <pod1>	   Back-end <pod1>
+     |	              |		       |
+    \|/		     \|/	      \|/
+     `		      `		       `
+      \               |		      /
+       \              |		     /
+        \             |		    /
+         \            |		   /
+          \           |		  /
+           \          | 	 /
+            \         |         /
+             \        |        / 
+              \       |       /
+               \      |	     /
+                \     |	    /    
+                 \    |    /
+                  \   |   /
+                   \  |  /
+                    \ | /
+                     \|/
+		      `
+_________________________________________________________________________________________
+			SERVICE
+__________________________________________________________________________________________
+			     ^
+	             	    /|\
+		    	   / | \
+ 		   	  /  |  \	
+		 	 /   |   \
+		 	/    |    \
+	               /     |     \
+	      	      /	     |      \ 
+	      	     /	     |       \
+	     	    /	     |        \
+	           /	     |         \
+	   	  /          |          \
+	  	 /	     |           \
+	 	/	     |            \  
+               /	     |	           \
+       	      /		     |	            \
+      	     /		     |		     \
+     	    /		     |		      \
+    	   /		     |   	       \
+   	  /		     |	                \
+ 	 /		     |		         \
+ 	/		     |		          \
+       /		     |                     \
+      /			     |		            \
+     _			     _			     _
+    /|\			    /|\		            /|\
+     |			     |			     |
+database <pod1>		database <pod1>		database <pod1>
+
+clusterip_service.yml
+
+apiVersion: v1
+kind: Service
+metadata:
+	name: back-end
+spec:
+	type: ClusterIP
+	ports:
+	 - targetPort: 80
+	   port: 80
+	selector:
+	  app: myapp
+	  type: back-end			# from pod.yml derive from labels
+-> kubectl create -f service.yml
+-> kubectl get svc
+* by default ClusterIP is used in Service if not specified
+3) loadbalancer
+
+-------------------------------------------------------------------------------------------------------------------
+
+# creating services.yml
+
+apiVersion: v1
+kind: Service
+metadata:
+	name: myapp-service
+spec:
+	type: NodePort
+	ports:
+		- targetPort: 80
+		  port: 80
+		  nodePort: 30008
+	selector:
+		app: myapps			# copied from definition of pods.yml file from labels.
+
+_____________________________________________________________________________________________________________________________
+		|# MICROSERVICES #|
+_____________________________________________________________________________________________________________________________
+
+# sample application
+
+voting-app (python-webapp)			  result-app ( node js appliction displays result)
+     |								 ^
+    \|/								/|\
+     `								 |
+reddis (in memory database)				db (postgress sql)
+      |								|
+      |								|
+      |								|
+      !--------------------------!	 !----------------------!
+				 |	 ^
+				\|/	/|\
+				 `	 |
+				worker (.net)
+			[ takes data from rediss and update in persistent db the result]	
+
+
+
+-> docker run -d --name=reddis reddis
+-> docker run -d --name=db postgres
+-> docker run -d --name=vote -p 5000:80 voting-app
+-> docker run -d --name=result -p 5001:80 result-app
+-> docker run -d --name=worker worker
+
+* if we search on browser it will show Internal server error
+because since we have successfully launched the conatainer instances but we didnt connect them
+So, this is where we use [link] cmd line option since reddis is dependent on web-app
+
+-> docker run -d --name=vote -p 5000:80 --link redis:redis voting-app
+(since python app. has defined one func that require an input of host i.e same as container name reddis thats y we specied reddis:reddis in link option
+** link will add the container name in /etc/hosts of web-app container with ip
+
+similarly we do for result app
+-> docker run -d --name=result -p 5001:80 --link=db:db result-app
+
+similarly for worker also
+-> docker run -d --name=worker --link db:db --link reddis:reddis
+-------------------------------------------------------------------------
+# GKE
+
+1) Google Container Engine Environment
+2) Create kubernetes pods
+3) Create Services-ClusterIP - internal
+4) Create Service-LoadBalancer - external
+
+1) ->
+kubernetes engine -> give name (voting-app), descp as my voting app, rest default
+gives us the cmd line 
+click on the connect to cluster and copy the cmd on cli to interact with kubernetes cluster
+
+-> kubectl get nodes 
+-> kubectl get svc
+
+* my-voting.yml
+
+apiVersion: v1
+kind: Pod
+metadata: 
+	name: voting-app-pod
+	labels:					# used to tag pods
+	 name: voting-app-pod
+	 app: demo-voting-app
+spec:
+	containers: 				# since the kind is Pod we need to specify spec as container and if it was service we need to specify ports and type (node port and clusterIP)
+	 - name: voting-app
+	   image: <docker_hub_image>dockersexample/examplevotingapp_vote
+	   ports:
+		- containerPort: 80
+
+* worker.yml
+apiVersion: v1
+kind: Pod
+metadata: 
+	name: worker-app-pod
+	labels:					# used to tag pods
+	 name: worker-app-pod
+	 app: demo-voting-app
+spec:
+	containers: 				# since the kind is Pod we need to specify spec as container and if it was service we need to specify ports and type (node port and clusterIP)
+	 - name: worker-app
+	   image: <docker_hub_image>dockersamples/examplevotingapp_worker
+	   
+* result.yml
+
+apiVersion: v1
+kind: Pod
+metadata: 
+	name: result-app-pod
+	labels:					# used to tag pods
+	 name: result-app-pod
+	 app: demo-voting-app
+spec:
+	containers: 				# since the kind is Pod we need to specify spec as container and if it was service we need to specify ports and type (node port and clusterIP)
+	 - name: result-app
+	   image: <docker_hub_image>dockersamples/examplevotingapp_result
+	   ports:
+		- containerPort: 80		# see architecture
+
+* reddis.yml
+apiVersion: v1
+kind: Pod
+metadata: 
+	name: reddis-pod
+	labels:					# used to tag pods
+	 name: reddis-pod
+	 app: demo-voting-app
+spec:
+	containers: 				# since the kind is Pod we need to specify spec as container and if it was service we need to specify ports and type (node port and clusterIP)
+	 - name: reddis
+	   image: <docker_hub_image>reddis
+	   ports:
+		- containerPort: 6379		# default port of reddis
+
+* postgres.yml
+apiVersion: v1
+kind: Pod
+metadata: 
+	name: postgress-pod
+	labels:					# used to tag pods
+	 name: postgress-pod
+	 app: demo-voting-app
+spec:
+	containers: 				# since the kind is Pod we need to specify spec as container and if it was service we need to specify ports and type (node port and clusterIP)
+	 - name: postgress
+	   image: <docker_hub_image>postgres:9.4
+	   ports:
+		- containerPort: 5432		# default port of reddis
+
+
+3) creating services
+
+* redis-service.yml
+
+apiVersion: v1
+kind: Service
+metadata:
+	name: redis
+	labels:
+		name: redis-service
+		app: demo-voting-app
+spec:
+	ports:
+		port: 6379
+		target: 6379
+	selector:
+		name: reddis-pod
+		app: demo-voting-app
+
+* db-service.yml
+
+apiVersion: v1
+kind: Service
+metadata:
+	name: db
+	labels:
+		name: db-service
+		app: demo-voting-app
+spec:
+	ports:
+		port: 5432
+		target: 5432
+	selector:
+		name: postgress-pod
+		app: demo-voting-app
+
+4) Load Balancer
+
+* voting-service.yml
+
+apiVersion: v1
+kind: Service
+metadata:
+	name: voting-service
+	labels:
+		name: voting-service
+		app: demo-voting-app
+spec:
+	type: LoadBalancer			# by default ip created are in ClusterIP so they are accessible only within cluster only. So to make the service available to outside world we specify Load Balancer
+	ports:
+		port: 80
+		target: 80
+	selector:
+		name: voting-app-pod
+		app: demo-voting-app
+
+* result-service.yml
+
+apiVersion: v1
+kind: Service
+metadata:
+	name: result-service
+	labels:
+		name: result-service		# copy from pod yml file from labels
+		app: demo-voting-app
+spec:
+	type: LoadBalancer			# by default ip created are in ClusterIP so they are accessible only within cluster only. So to make the service available to outside world we specify Load Balancer
+	ports:
+		port: 80
+		target: 80
+	selector:
+		name: result-app-pod
+		app: demo-voting-app
+
+* deploying application
+
+-> kubectl create -f voting-pod.yml
+-> kubectl get pods
+-> kubectl create -f voting-service.yml
+-> kubectl get svc
+* take external IP and go to browser and check it works.
+
+-> kubectl create -f reddis-pod.yml
+-> kubectl get pods
+-> kubectl create -f reddis-service.yml
+-> kubectl get svc
+
+-> kubectl create -f postgress-pod.yml
+-> kubectl get pods
+-> kubectl create -f postgress-service.yml
+-> kubectl get svc
+
+-> kubectl create -f worker-pod.yml
+-> kubectl get pods
+
+-> kubectl create -f result-pod.yml
+-> kubectl get pods
+-> kubectl create -f result-service.yml
+-> kubectl get svc
+____________________________________________________________________________________________________________
+
+# improvised version of project by creating deployment since they cant be scaled if goes down
+
+apiVersion: app/v1
+kind: Deployment
+metadata:
+	name: reddis-deployment
+	lables:
+		app: reddis
+	spec:
+		replicas: 1				# database need only one pods
+		selector:
+			matchLables:
+				# copy from pod.yml from labels
+				name: reddis-pod
+	     	                app: demo-voting-app 
+		template:				# copy from metadata all content from pod.yml
+			metadata: 
+				name: reddis-pod
+				labels:					# used to tag pods
+					 name: reddis-pod
+					 app: demo-voting-app
+			spec:
+				containers: 				# since the kind is Pod we need to specify spec as container and if it was service we need to specify ports and type (node port and clusterIP)
+				 - name: reddis
+				   image: <docker_hub_image>reddis
+				   ports:
+					- containerPort: 6379		# default port of reddis
+
